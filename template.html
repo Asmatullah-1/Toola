@@ -1,0 +1,75 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Techsneurons Radar</title><style>
+:root{--bg:#f6f7fb;--card:#fff;--tx:#14161f;--mut:#5b6272;--ac:#4f4fe0;--bd:#e5e7eb;--hot:#ea580c}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1017;--card:#171a24;--tx:#e8eaf2;--mut:#a3abbd;--ac:#8b8bff;--bd:#272b3a}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,sans-serif}
+.w{max-width:1100px;margin:0 auto;padding:20px 16px 60px}h1{margin:0;font-size:1.6rem}.m{color:var(--mut);font-size:.85rem}h3{margin:0 0 8px;font-size:.95rem}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:16px 0}
+.st,.top>div{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px}.st b{display:block;font-size:1.5rem}
+.top{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;margin-bottom:14px}.top ol{margin:0;padding-left:20px}.top li{margin:4px 0}.top a{color:var(--tx);text-decoration:none}.top a:hover{color:var(--ac)}
+.warn{background:var(--card);border:1px solid var(--hot);border-radius:10px;padding:10px;margin-top:10px}
+.bar{position:sticky;top:0;background:var(--bg);padding:10px 0;z-index:5;display:flex;flex-wrap:wrap;gap:8px}
+input,select{padding:9px 12px;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font:inherit;max-width:100%}.bar input{flex:1 1 200px}
+button{cursor:pointer;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:999px;padding:7px 14px;font:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+button.on{background:var(--ac);border-color:var(--ac);color:#fff}.chips,.row,.tabs{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.chips{margin:4px 0 10px}
+.tabs{gap:8px}#fbtn{display:none}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px}
+.c{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.c a{color:var(--tx);font-weight:600;text-decoration:none}.c a:hover{color:var(--ac)}.c input{flex:1;min-width:0;padding:6px 10px;border-radius:8px;background:var(--bg)}
+.tag{font-size:.74rem;padding:2px 8px;border-radius:99px;background:var(--bd);color:var(--mut)}.new{background:var(--ac);color:#fff}.hotb{background:var(--hot);color:#fff}
+.hot{color:var(--hot)}.sn{color:var(--mut);font-size:.88rem}.c button{align-self:flex-start;padding:4px 12px;font-size:.8rem}.c .sv{margin-left:auto;padding:0 4px;border:0;background:none;font-size:1.05rem}
+.empty{color:var(--mut);padding:30px;text-align:center}
+@media(max-width:700px){#fbtn{display:inline-block}#fw.hide{display:none}.w{padding-bottom:90px}h1{font-size:1.3rem}
+.tabs{position:fixed;bottom:0;left:0;right:0;justify-content:space-around;background:var(--card);border-top:1px solid var(--bd);padding:8px 4px calc(8px + env(safe-area-inset-bottom,0px));z-index:9}}
+</style></head><body><div class="w">
+<h1>⚡ Techsneurons Radar</h1><div class="m" id="gen"></div>
+<div class="bar"><input id="q" aria-label="Search" placeholder="Search titles, sources, topics…"><button id="fbtn">⚙️ Filters</button>
+<nav class="tabs"><button data-t="news" class="on">📰 News</button><button data-t="pain">🎯 Pain points</button><button data-t="saved">⭐ Saved</button><button data-t="health">🩺 Sources</button></nav></div>
+<div id="fw"><div class="chips" id="chips"></div><div class="row" style="margin-bottom:12px"><select id="sort" aria-label="Sort"><option value="hot">Sort: Hottest</option><option value="new">Sort: Newest</option><option value="rep">Sort: Most repeated</option></select>
+<select id="ind" aria-label="Industry"></select>
+<select id="win" aria-label="Time window"><option value="0">Any time</option><option value="6">Last 6h</option><option value="24">Last 24h</option><option value="72">Last 3 days</option></select><button id="hot">🔥 Hot only</button></div></div>
+<div id="warn"></div><div class="stats" id="stats"></div><div class="top" id="top"></div>
+<div class="grid" id="g"></div></div>
+<script>
+const D=__DATA__;let tab="news",cat="All",sec="All",hot=false,q="",sort="hot",win=0;const $=s=>document.querySelector(s);
+const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
+const ago=t=>{const m=Math.max(1,Math.round((Date.now()/1e3-t)/60));return m<60?m+"m ago":m<1440?Math.round(m/60)+"h ago":Math.round(m/1440)+"d ago"};
+let S={saved:{},st:{},n:{},last:0,prev:0};try{S=Object.assign(S,JSON.parse(localStorage.getItem("radar")||"{}"))}catch(e){}
+const save=()=>{try{localStorage.setItem("radar",JSON.stringify(S))}catch(e){}},now=Date.now()/1e3;
+const prev=now-S.last>1800?S.last:S.prev;S.prev=prev;S.last=now;save();
+$("#gen").textContent="Updated "+D.generated+" · news window "+D.hours+"h · pain-point window 72h";
+if(D.gen_ts){const h=(now-D.gen_ts)/3600;if(h>12)$("#warn").append(el("div","warn","⚠️ This data is "+Math.round(h)+"h old. The scheduled run may have failed, so check the Actions tab on GitHub."))}
+[[D.news.length,"News stories"],[D.news.filter(i=>i.score>=2).length,"🔥 Hot"],[D.pain.length,"Pain-point themes"],[D.industries||"–","Industries watched"],[D.live_sources+"/"+D.total_sources,"Sources live"]].forEach(([n,l])=>{const s=el("div","st");s.append(el("b",0,n),el("span","m",l));$("#stats").append(s)});
+const all=[...D.news,...D.pain],indsOf=i=>i.inds||[i.cat],sectorOf=n=>D.sectors[n]||"Other",first=(a,b)=>(b=="Creative & Media")-(a=="Creative & Media")||a.localeCompare(b);
+function topBox(h,items,pain){const b=el("div"),o=el("ol");b.append(el("h3",0,h));items.forEach(i=>{const li=el("li"),a=el("a",0,i.title);a.href=i.link;a.target="_blank";a.rel="noopener";li.append(a,el("span","m"," · "+(pain?i.cat+(i.n>1?" · "+i.n+" similar":""):i.source+(i.n>1?" · "+i.n+" sources":""))));o.append(li)});b.append(o);return b}
+function render(){const src=tab=="saved"?all.filter(i=>S.saved[i.title]):D[tab],g=$("#g"),cs=$("#chips"),tp=$("#top"),nw=Date.now()/1e3;g.replaceChildren();cs.replaceChildren();tp.replaceChildren();
+ if((tab=="news"||tab=="pain")&&!q&&cat=="All"&&sec=="All"&&!win&&!hot){if(D.news.length)tp.append(topBox("🔥 Top launches right now",D.news.slice(0,5),0));if(D.pain.length)tp.append(topBox("🎯 Strongest problems to write about",D.pain.slice(0,3),1))}
+ const secs=[...new Set(src.flatMap(indsOf).map(sectorOf).filter(s=>s!="Other"))].sort(first),base=src.filter(i=>sec=="All"||indsOf(i).some(n=>sectorOf(n)==sec));
+ if(secs.length&&tab!="health")["All",...secs].forEach(s=>{const b=el("button",s==sec?"on":"",s=="All"?"All sectors":s=="Creative & Media"?"🎨 "+s:s);b.onclick=()=>{sec=s;cat="All";render()};cs.append(b)});
+ const names=[...new Set(base.flatMap(indsOf))],sl=$("#ind"),grp={};sl.replaceChildren();
+ const o0=el("option",0,"All industries ("+names.length+")");o0.value="All";sl.append(o0);names.forEach(n=>(grp[sectorOf(n)]=grp[sectorOf(n)]||[]).push(n));
+ Object.keys(grp).sort(first).forEach(s=>{const og=document.createElement("optgroup");og.label=s;grp[s].sort().forEach(n=>{const o=el("option",0,n);o.value=n;og.append(o)});sl.append(og)});
+ if(!names.includes(cat))cat="All";sl.value=cat;
+ const cmp={hot:(a,b)=>b.score-a.score||b.ts-a.ts,new:(a,b)=>b.ts-a.ts,rep:(a,b)=>(b.n||1)-(a.n||1)||b.score-a.score}[sort];
+ const list=src.filter(i=>tab=="health"||((cat=="All"||indsOf(i).includes(cat))&&(sec=="All"||indsOf(i).some(n=>sectorOf(n)==sec))&&(!hot||i.score>=2)&&(!win||i.ts>nw-win*3600)&&(i.title+i.source+(i.snip||"")).toLowerCase().includes(q)));
+ if(tab=="health")list.sort((a,b)=>(a.status=="ok")-(b.status=="ok"));else list.sort(cmp);
+ if(tab=="saved"&&list.length){const ex=el("button",0,"📋 Export checklist");ex.onclick=()=>{const t=list.map(i=>`- [${S.st[i.title]=="done"?"x":" "}] ${i.title} (${S.st[i.title]||"idea"})\n  ${i.link}${S.n[i.title]?"\n  Note: "+S.n[i.title]:""}`).join("\n");try{navigator.clipboard.writeText(t)}catch(e){}ex.textContent="Copied ✓"};cs.append(ex)}
+ if(!list.length){g.append(el("div","empty",tab=="saved"?"Nothing saved yet. Tap ☆ on any card.":"Nothing here yet. Try another filter."));return}
+ list.slice(0,300).forEach(i=>{const c=el("div","c"),r=el("div","row");
+  if(tab=="health"){r.append(el("span","tag",i.status=="ok"?"✅ live":i.status=="empty"?"⚠️ no entries":"❌ error"),el("span","tag",i.cat),el("span","m",i.note||""));const a=el("a",0,i.title);a.href=i.link;a.target="_blank";c.append(r,a);g.append(c);return}
+  if(i.score>=2)r.append(el("span","hot","🔥"));if(prev&&i.ts>prev)r.append(el("span","tag new","NEW"));
+  r.append(el("span","tag",i.p?i.cat:i.source),el("span","m",ago(i.ts)));
+  const sv=el("button","sv",S.saved[i.title]?"⭐":"☆");sv.setAttribute("aria-label","Save");sv.onclick=()=>{S.saved[i.title]?delete S.saved[i.title]:S.saved[i.title]=1;save();render()};r.append(sv);
+  const a=el("a",0,i.title);a.href=i.link;a.target="_blank";a.rel="noopener";c.append(r,a);
+  if(i.snip)c.append(el("div","sn",i.snip));
+  const t=el("div","row");if(i.n>1)t.append(el("span","tag hotb",i.p?"🔁 "+i.n+" similar posts: a recurring problem":"📡 "+i.n+" sources"));
+  i.tags.forEach(x=>t.append(el("span","tag",i.p?"“"+x+"”":x)));if(t.children.length)c.append(t);
+  if(i.also&&i.also.length){const x=el("div","sn","Also: ");i.also.slice(0,4).forEach(o=>{const l=el("a",0,o.source);l.href=o.link;l.target="_blank";l.style.fontWeight=400;x.append(l," · ")});c.append(x)}
+  if(tab=="saved"){const w=el("div","row"),st=el("select");st.setAttribute("aria-label","Status");[["idea","💡 Idea"],["draft","✍️ Drafting"],["done","✅ Published"]].forEach(([v,l])=>{const o=el("option",0,l);o.value=v;st.append(o)});st.value=S.st[i.title]||"idea";st.onchange=()=>{S.st[i.title]=st.value;save()};const nt=el("input");nt.placeholder="Note or angle…";nt.setAttribute("aria-label","Note");nt.value=S.n[i.title]||"";nt.oninput=()=>{S.n[i.title]=nt.value;save()};w.append(st,nt);c.append(w)}
+  if(i.p){const b=el("button",0,"Copy blog idea");b.onclick=()=>{try{navigator.clipboard.writeText(`Blog idea: How ${i.cat} professionals can solve “${i.title}” with AI\nSource: ${i.link}`)}catch(e){}b.textContent="Copied ✓"};c.append(b)}
+  g.append(c)})}
+document.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{tab=b.dataset.t;cat="All";sec="All";document.querySelectorAll("[data-t]").forEach(x=>x.classList.toggle("on",x==b));render()});
+$("#hot").onclick=e=>{hot=!hot;e.target.classList.toggle("on",hot);render()};$("#q").oninput=e=>{q=e.target.value.toLowerCase();render()};
+$("#ind").onchange=e=>{cat=e.target.value;render()};$("#sort").onchange=e=>{sort=e.target.value;render()};$("#win").onchange=e=>{win=+e.target.value;render()};
+const fw=$("#fw");$("#fbtn").onclick=()=>fw.classList.toggle("hide");
+render();
+</script></body></html>
