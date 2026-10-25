@@ -1,0 +1,3 @@
+# Add Google Alerts RSS feeds here, one per line:  Name|feed-url
+# Alerts like  site:quora.com "how do I automate"  or  site:linkedin.com/posts "wasting hours"
+# (Google Alerts -> Show options -> Deliver to: RSS feed -> copy the feed link)
