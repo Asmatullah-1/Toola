@@ -3,6 +3,7 @@
 import calendar, random, concurrent.futures as cf, datetime as dt, html, json, os, re, smtplib, socket, ssl, time
 from email.mime.text import MIMEText
 import feedparser
+from ideas import make_ideas
 from sources import INDUSTRIES, SECTOR_OF, news_sources, pain_sources
 
 UA = "Mozilla/5.0 (compatible; TechsneuronsRadar/2.0)"
@@ -169,6 +170,7 @@ def email(d):
 
 if __name__ == "__main__":
     d = run()
+    d["ideas"] = make_ideas(d)
     os.makedirs("docs", exist_ok=True)
     blob = json.dumps(d).replace("</", "<\\/")
     open("docs/data.json", "w", encoding="utf-8").write(json.dumps(d))
